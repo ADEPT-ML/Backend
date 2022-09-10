@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import requests
 
 app = FastAPI()
 origins = ["*"]
@@ -20,27 +21,27 @@ def read_root():
 
 @app.get("/buildings")
 def read_buildings():
-    pass
+    return requests.get("http://data-management/buildings").json()
 
 
-@app.get("/building/{building}/sensors")
+@app.get("/buildings/{building}/sensors")
 def read_building_sensors(building: str):
-    pass
+    return requests.get(f"http://data-management/buildings/{building}/sensors").json()
 
 
-@app.get("/building/{building}/sensor/{sensor}")
+@app.get("/buildings/{building}/sensors/{sensor}")
 def read_building_sensor(building: str, sensor: str):
-    pass
+    return requests.get(f"http://data-management/buildings/{building}/sensors/{sensor}").json()
 
 
-@app.get("/building/{building}/timestamps")
+@app.get("/buildings/{building}/timestamps")
 def read_building_timestamps(building: str):
-    pass
+    return requests.get(f"http://data-management/buildings/{building}/timestamps").json()
 
 
 @app.get("/algorithms")
 def read_algorithms():
-    pass
+    return requests.get("http://anomaly-detection/algorithms").json()
 
 
 @app.get("/calculate/anomalies")
