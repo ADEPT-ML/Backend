@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 
+anomaly_storage = dict()
 app = FastAPI()
 origins = ["*"]
 
@@ -45,15 +46,33 @@ def read_algorithms():
 
 
 @app.get("/calculate/anomalies")
-def read_anomalies(algo: int, building: str, sensors: str, start: str, stop: str):
-    pass
+def read_anomalies(algo: int, building: str, sensors: str, start: str, stop: str, request: Request):
+    global anomaly_storage
+    uuid = request.headers.get("uuid")
+    data_query = f"http://data-management/buildings/{building}/slice?{'&'.join([f'sensors={s}' for s in sensors.split(';')])}&start={start}&stop={stop}"
+    building_data = requests.get(data_query).json()
+    anomaly_query = f"http://anomaly-detection/calculate?algo={algo}&building={building}"
+    anomalies = requests.post(anomaly_query, json=building_data).json()
+    anomaly_storage[uuid] = {
+        "deep-error": anomalies["deep-error"],
+        "dataframe": building_data["payload"],
+        "sensors": sensors.split(';'),
+        "algo": algo,
+        "timestamps": anomalies["timestamps"],
+        "anomalies": anomalies["raw-anomalies"],
+        "error": anomalies["error"]}
+    del anomalies["deep-error"]
+    del anomalies["raw-anomalies"]
+    return anomalies
 
 
 @app.get("/calculate/prototypes")
-def read_prototypes(anomaly: int):
-    pass
+def read_prototypes(anomaly: int, request: Request):
+    uuid = request.headers.get("uuid")
+    return requests.post(f"http://explainability/prototypes?anomaly={anomaly}", json={"payload": anomaly_storage[uuid]}).json()
 
 
 @app.get("/calculate/feature-attribution")
-def read_feature_attribution(anomaly: int):
-    pass
+def read_feature_attribution(anomaly: int, request: Request):
+    uuid = request.headers.get("uuid")
+    return requests.post(f"http://explainability/feature-attribution?anomaly={anomaly}", json={"payload": anomaly_storage[uuid]}).json()
