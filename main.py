@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 
+from src import schema
+
 anomaly_storage = dict()
 app = FastAPI()
 origins = ["*"]
@@ -105,3 +107,6 @@ def read_prototypes(anomaly: int, request: Request):
 def read_feature_attribution(anomaly: int, request: Request):
     uuid = request.headers.get("uuid")
     return requests.post(f"http://explainability/feature-attribution?anomaly={anomaly}", json={"payload": anomaly_storage[uuid]}).json()
+
+
+schema.custom_openapi(app)
