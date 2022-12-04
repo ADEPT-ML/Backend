@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
 import requests
 
 from src import schema
+
 
 anomaly_storage = dict()
 app = FastAPI()
