@@ -1,6 +1,8 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Request
+from pydantic import Json
 import requests
+import json
 
 from src import schema
 
@@ -78,12 +80,12 @@ def read_algorithms():
 
 
 @app.get("/calculate/anomalies")
-def read_anomalies(algo: int, building: str, sensors: str, start: str, stop: str, request: Request):
+def read_anomalies(algo: int, building: str, sensors: str, start: str, stop: str, config: Json, request: Request):
     global anomaly_storage
     uuid = request.headers.get("uuid")
     data_query = f"http://data-management/buildings/{building}/slice?{'&'.join([f'sensors={s}' for s in sensors.split(';')])}&start={start}&stop={stop}"
     building_data = requests.get(data_query).json()
-    anomaly_query = f"http://anomaly-detection/calculate?algo={algo}&building={building}"
+    anomaly_query = f"http://anomaly-detection/calculate?algo={algo}&building={building}&config={json.dumps(config)}"
     anomalies = requests.post(anomaly_query, json=building_data).json()
     anomaly_storage[uuid] = {
         "deep-error": anomalies["deep-error"],
