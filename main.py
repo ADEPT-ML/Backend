@@ -1,11 +1,10 @@
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, Path, Query, Request
+from fastapi import FastAPI, Path, Query, Request, HTTPException
 from pydantic import Json
 import requests
 import json
 
-from src import schema
-
+from src import schema, validate
 
 anomaly_storage = dict()
 app = FastAPI()
@@ -79,11 +78,18 @@ async def root():
 )
 def read_buildings():
     """API endpoint that returns a list of all available building names.
-    
+
     Returns:
         A list of all available buildings as JSON.
     """
-    return requests.get("http://data-management/buildings").json()
+    try:
+        response = requests.get("http://data-management/buildings")
+        validate.validate_response(response)
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -141,20 +147,27 @@ def read_buildings():
     tags=["Buildings and Sensors"]
 )
 def read_building_sensors(
-    building: str = Path(
-        description="Path parameter to select a building",
-        example="EF 40a"
-    )
+        building: str = Path(
+            description="Path parameter to select a building",
+            example="EF 40a"
+        )
 ):
     """API endpoint that returns a list of all available sensors.
-    
+
     Args:
         building: The name of the building for which the sensors are requested.
-        
+
     Returns:
         A list of all available sensors for the building or a 404 if the building is not found.
     """
-    return requests.get(f"http://data-management/buildings/{building}/sensors").json()
+    try:
+        response = requests.get(f"http://data-management/buildings/{building}/sensors")
+        validate.validate_response(response)
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -191,23 +204,32 @@ def read_building_sensors(
     tags=["Buildings and Sensors"]
 )
 def read_building_sensor(
-    building: str = Path(
-        description="Path parameter to select a building",
-        example="EF 40a"
-    ),
-    sensor: str = Path(
-        description="Path parameter to select a sensor",
-        example="Temperatur"
-    )
+        building: str = Path(
+            description="Path parameter to select a building",
+            example="EF 40a"
+        ),
+        sensor: str = Path(
+            description="Path parameter to select a sensor",
+            example="Temperatur"
+        )
 ):
     """API endpoint that returns the data of a specific sensor of a building.
+
     Args:
         building: The name of the building for which the sensor values are requested.
         sensor: The name of the sensor for which the values are requested.
+
     Returns:
         A list of all values of the specified building sensor combination as JSON.
     """
-    return requests.get(f"http://data-management/buildings/{building}/sensors/{sensor}").json()
+    try:
+        response = requests.get(f"http://data-management/buildings/{building}/sensors/{sensor}")
+        validate.validate_response(response)
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -245,18 +267,27 @@ def read_building_sensor(
     tags=["Buildings and Sensors"]
 )
 def read_building_timestamps(
-    building: str = Path(
-        description="Path parameter to select a building",
-        example="EF 40a"
-    )
+        building: str = Path(
+            description="Path parameter to select a building",
+            example="EF 40a"
+        )
 ):
     """API endpoint that returns all timestamps of the specified building.
+
     Args:
         building: The name of the building for which the timestamps are requested.
+
     Returns:
         A list of all timestamps of the available building data as JSON.
     """
-    return requests.get(f"http://data-management/buildings/{building}/timestamps").json()
+    try:
+        response = requests.get(f"http://data-management/buildings/{building}/timestamps")
+        validate.validate_response(response)
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -304,7 +335,14 @@ def read_building_timestamps(
     tags=["Anomaly Detection"]
 )
 def read_algorithms():
-    return requests.get("http://anomaly-detection/algorithms").json()
+    try:
+        response = requests.get("http://anomaly-detection/algorithms")
+        validate.validate_response(response)
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -349,52 +387,64 @@ def read_algorithms():
     tags=["Anomaly Detection"]
 )
 def read_anomalies(
-    algo: int = Query(
-        description="Path parameter to select the algorithm",
-        example="1"
-    ),
-    building: str = Query(
-        description="Query parameter to select a building",
-        example="EF 40a"
-    ),
-    sensors: str = Query(
-        description="Query parameter list to select the sensors. \
+        algo: int = Query(
+            description="Path parameter to select the algorithm",
+            example="1"
+        ),
+        building: str = Query(
+            description="Query parameter to select a building",
+            example="EF 40a"
+        ),
+        sensors: str = Query(
+            description="Query parameter list to select the sensors. \
         The list has to be seperated by ; and all sensors have to be available sensors for the selected building.",
-        example="Temperatur;Wärme Diff"
-    ),
-    start: str = Query(
-        description="Query parameter to select the start of the timeframe. \
+            example="Temperatur;Wärme Diff"
+        ),
+        start: str = Query(
+            description="Query parameter to select the start of the timeframe. \
         The timestamp has to be inside of the dataframe of the building + sensors combination",
-        example="2021-01-01T23:00:00.000Z"
-    ),
-    stop: str = Query(
-        description="Query parameter to select the end of the timeframe. \
+            example="2021-01-01T23:00:00.000Z"
+        ),
+        stop: str = Query(
+            description="Query parameter to select the end of the timeframe. \
         The timestamp has to be inside of the dataframe of the building + sensors combination",
-        example="2022-01-01T23:00:00.000Z"
-    ),
-    config: Json = Query(
-        description="Query parameter to send a config for the algo",
-        example="{\"dropdown\":\"Percentile\",\"percentile\":99.5,\"constant\":1}"
-    ),
-    request: Request = None
+            example="2022-01-01T23:00:00.000Z"
+        ),
+        config: Json = Query(
+            description="Query parameter to send a config for the algo",
+            example="{\"dropdown\":\"Percentile\",\"percentile\":99.5,\"constant\":1}"
+        ),
+        request: Request = None
 ):
-    global anomaly_storage
-    uuid = request.headers.get("uuid")
-    data_query = f"http://data-management/buildings/{building}/slice?{'&'.join([f'sensors={s}' for s in sensors.split(';')])}&start={start}&stop={stop}"
-    building_data = requests.get(data_query).json()
-    anomaly_query = f"http://anomaly-detection/calculate?algo={algo}&building={building}&config={json.dumps(config)}"
-    anomalies = requests.post(anomaly_query, json=building_data).json()
-    anomaly_storage[uuid] = {
-        "deep-error": anomalies["deep-error"],
-        "dataframe": building_data["payload"],
-        "sensors": sensors.split(';'),
-        "algo": algo,
-        "timestamps": anomalies["timestamps"],
-        "anomalies": anomalies["raw-anomalies"],
-        "error": anomalies["error"]}
-    del anomalies["deep-error"]
-    del anomalies["raw-anomalies"]
-    return anomalies
+    try:
+        global anomaly_storage
+        uuid = request.headers.get("uuid")
+        sensors_list = sensors.split(';')
+        sensors_parameter = '&'.join([f'sensors={s}' for s in sensors_list])
+        data_url = f"http://data-management/buildings/{building}/slice?{sensors_parameter}&start={start}&stop={stop}"
+        building_data = requests.get(data_url)
+        validate.validate_response(building_data)
+        building_data = building_data.json()
+        anomaly_url = f"http://anomaly-detection/calculate?algo={algo}&building={building}&config={json.dumps(config)}"
+        anomalies_response = requests.post(anomaly_url, json=building_data)
+        validate.validate_response(anomalies_response)
+        anomalies = anomalies_response.json()
+        anomaly_storage[uuid] = {
+            "deep-error": anomalies["deep-error"],
+            "dataframe": building_data["payload"],
+            "sensors": sensors_list,
+            "algo": algo,
+            "timestamps": anomalies["timestamps"],
+            "anomalies": anomalies["raw-anomalies"],
+            "error": anomalies["error"]
+        }
+        del anomalies["deep-error"]
+        del anomalies["raw-anomalies"]
+        return anomalies
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -449,14 +499,22 @@ def read_anomalies(
     tags=["Prototypes"]
 )
 def read_prototypes(
-    anomaly: int = Query(
-        description="Path parameter to select the algorithm",
-        example="1"
-    ), 
-    request: Request = None
+        anomaly: int = Query(
+            description="Path parameter to select the algorithm",
+            example="1"
+        ),
+        request: Request = None
 ):
-    uuid = request.headers.get("uuid")
-    return requests.post(f"http://explainability/prototypes?anomaly={anomaly}", json={"payload": anomaly_storage[uuid]}).json()
+    try:
+        uuid = request.headers.get("uuid")
+        url = f"http://explainability/prototypes?anomaly={anomaly}"
+        response = requests.post(url, json={"payload": anomaly_storage[uuid]})
+        validate.validate_response(response)
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @app.get(
@@ -498,14 +556,22 @@ def read_prototypes(
     tags=["Attributions"]
 )
 def read_feature_attribution(
-    anomaly: int = Query(
-        description="Path parameter to select the algorithm",
-        example="1"
-    ),
-    request: Request = None
+        anomaly: int = Query(
+            description="Path parameter to select the algorithm",
+            example="1"
+        ),
+        request: Request = None
 ):
-    uuid = request.headers.get("uuid")
-    return requests.post(f"http://explainability/feature-attribution?anomaly={anomaly}", json={"payload": anomaly_storage[uuid]}).json()
+    try:
+        uuid = request.headers.get("uuid")
+        url = f"http://explainability/feature-attribution?anomaly={anomaly}"
+        response = requests.post(url, json={"payload": anomaly_storage[uuid]})
+        validate.validate_response(response)
+        return response.json()
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 schema.custom_openapi(app)
