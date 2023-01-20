@@ -1,3 +1,4 @@
+"""Contains functions for validation."""
 from fastapi import HTTPException
 from requests import Response
 

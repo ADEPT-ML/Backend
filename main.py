@@ -1,3 +1,4 @@
+"""The main module with all API definitions of the Backend service"""
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Path, Query, Request, HTTPException
 from pydantic import Json
@@ -335,6 +336,11 @@ def read_building_timestamps(
     tags=["Anomaly Detection"]
 )
 def read_algorithms():
+    """API endpoint that returns a list of all available anomaly detection algorithms.
+
+    Returns:
+        A list of all anomaly detection algorithms including their configuration options.
+    """
     try:
         response = requests.get("http://anomaly-detection/algorithms")
         validate.validate_response(response)
@@ -412,10 +418,24 @@ def read_anomalies(
         ),
         config: Json = Query(
             description="Query parameter to send a config for the algo",
-            example="{\"dropdown\":\"Percentile\",\"percentile\":99.5,\"constant\":1}"
+            example={"dropdown": "Percentile", "percentile": 99.5, "constant": 1}
         ),
         request: Request = None
 ):
+    """API endpoint that analyzes the specified data slice and detects anomalies within.
+
+    Args:
+        algo: The id of the desired algorithm.
+        building: The name of the building.
+        sensors: The desired selection of sensors.
+        start: The first timestamp of the data slice.
+        stop: The last timestamp of the data slice.
+        config: The configuration for the algorithm.
+        request: The request object containing the uuid.
+
+    Returns:
+        A json representation of the identified anomalies and additional metadata.
+    """
     try:
         global anomaly_storage
         uuid = request.headers.get("uuid")
@@ -505,6 +525,15 @@ def read_prototypes(
         ),
         request: Request = None
 ):
+    """API endpoint that creates prototypes for the specified anomaly.
+
+    Args:
+        anomaly: The ID of the anomaly for which the prototypes are created.
+        request: The request object containing the uuid.
+
+    Returns:
+        Two created prototypes and the anomaly with the same timeframe.
+    """
     try:
         uuid = request.headers.get("uuid")
         url = f"http://explainability/prototypes?anomaly={anomaly}"
@@ -562,6 +591,15 @@ def read_feature_attribution(
         ),
         request: Request = None
 ):
+    """API endpoint that calculates the feature attribution for the specified anomaly.
+
+    Args:
+        anomaly: The ID of the anomaly for which the prototypes are created.
+        request: The request object containing the uuid.
+
+    Returns:
+        The calculated feature attribution for the specified anomaly.
+    """
     try:
         uuid = request.headers.get("uuid")
         url = f"http://explainability/feature-attribution?anomaly={anomaly}"
